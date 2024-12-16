@@ -8,6 +8,8 @@ import time
 from functools import wraps
 import copyreg
 
+TIME_LEN = 20
+
 def _pickle_keypoints(point):
     return cv.KeyPoint, (*point.pt, point.size, point.angle,
                          point.response, point.octave, point.class_id)
@@ -24,7 +26,9 @@ def timeit(func):
         end_time = time.time()
         elapsed_time = end_time - start_time
         wrapper.times.append(elapsed_time)
-        print(f"Time taken for {func.__name__}: {elapsed_time:.4f} seconds")
+        if len(wrapper.times) % TIME_LEN == 0:
+            average_time = sum(wrapper.times[-TIME_LEN:]) / TIME_LEN
+            print(f"Average time for last {TIME_LEN} frames in {func.__name__}: {average_time:.4f} seconds")
         return result
     wrapper.times = []
     return wrapper
