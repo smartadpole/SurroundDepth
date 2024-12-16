@@ -10,6 +10,18 @@ import copyreg
 
 TIME_LEN = 20
 
+import argparse
+
+def GetArgs():
+    parse = argparse.ArgumentParser()
+    parse.add_argument("--root_path", type=str, default='../data/ddad/sift')
+    parse.add_argument("--rgb_path", type=str, default='../data/ddad/raw_data')
+    parse.add_argument("--camera_names", type=str, nargs='+', default=['CAMERA_01', 'CAMERA_05', 'CAMERA_06', 'CAMERA_07', 'CAMERA_08', 'CAMERA_09'])
+    parse.add_argument("--info_path", type=str, default='../datasets/ddad/info_train.pkl')
+
+    return parse.parse_args()
+
+
 def _pickle_keypoints(point):
     return cv.KeyPoint, (*point.pt, point.size, point.angle,
                          point.response, point.octave, point.class_id)
@@ -70,11 +82,12 @@ def process(args):
             pickle.dump(to_save, f)
 
 def main():
-    root_path = '../data/ddad/sift'
-    rgb_path = '../data/ddad/raw_data'
-    camera_names = ['CAMERA_01', 'CAMERA_05', 'CAMERA_06', 'CAMERA_07', 'CAMERA_08', 'CAMERA_09']
+    args = GetArgs()
+    root_path = args.root_path
+    rgb_path = args.rgb_path
+    camera_names = args.camera_names
 
-    with open('../datasets/ddad/info_train.pkl', 'rb') as f:
+    with open(args.info_path, 'rb') as f:
         info = pickle.load(f)
 
     # Load already processed frames and measure the time
