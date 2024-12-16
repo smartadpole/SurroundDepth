@@ -6,6 +6,14 @@ from tqdm import tqdm
 import multiprocessing
 import time
 from functools import wraps
+import copyreg
+
+def _pickle_keypoints(point):
+    return cv.KeyPoint, (*point.pt, point.size, point.angle,
+                         point.response, point.octave, point.class_id)
+
+copyreg.pickle(cv.KeyPoint().__class__, _pickle_keypoints)
+
 
 # Decorator function to measure the time taken by a function
 def timeit(func):
@@ -47,11 +55,11 @@ def process(args):
         save_path = os.path.join(root_path, scene_name, 'sift', camera_name, frame_id + '.pkl')
         if frame_id in processed_frames:
             continue
-        print(frame_id, camera_name)
+
         inputs = cv.imread(os.path.join(rgb_path, scene_name, 'rgb', camera_name, frame_id + '.png'))
         img1 = cv.cvtColor(inputs, cv.COLOR_RGB2GRAY)
         kp1, des1 = detect_and_compute(img1, sift)
-        to_save['kp'] = [(kp.pt, kp.size, kp.angle, kp.response, kp.octave, kp.class_id) for kp in kp1]
+        to_save['kp'] = kp1
         to_save['des'] = des1
 
         with open(save_path, 'wb') as f:
