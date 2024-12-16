@@ -1,31 +1,11 @@
 from __future__ import absolute_import, division, print_function
-
 import os
-import sys
-import glob
-import argparse
-import numpy as np
-import PIL.Image as pil
-from PIL import Image
-import matplotlib as mpl
-import matplotlib.cm as cm
-
-import pdb
 import cv2 as cv
-import copy
 import pickle
 from tqdm import tqdm
-import copyreg
-import time
 import multiprocessing
 import time
 from functools import wraps
-
-
-def _pickle_keypoints(point):
-    return cv.KeyPoint, (*point.pt, point.size, point.angle,
-                         point.response, point.octave, point.class_id)
-copyreg.pickle(cv.KeyPoint().__class__, _pickle_keypoints)
 
 # Decorator function to measure the time taken by a function
 def timeit(func):
@@ -57,7 +37,9 @@ def load_processed_frames(root_path, camera_names):
                     processed_frames.add(frame_id)
     return processed_frames
 
-def process(sift, frame_id, info, root_path, rgb_path, camera_names, processed_frames):
+def process(args):
+    frame_id, info, root_path, rgb_path, camera_names, processed_frames = args
+    sift = cv.xfeatures2d.SIFT_create(edgeThreshold=8, contrastThreshold=0.01)
     scene_name = info[frame_id]['scene_name']
     for camera_name in camera_names:
         to_save = {}
@@ -69,7 +51,7 @@ def process(sift, frame_id, info, root_path, rgb_path, camera_names, processed_f
         inputs = cv.imread(os.path.join(rgb_path, scene_name, 'rgb', camera_name, frame_id + '.png'))
         img1 = cv.cvtColor(inputs, cv.COLOR_RGB2GRAY)
         kp1, des1 = detect_and_compute(img1, sift)
-        to_save['kp'] = kp1
+        to_save['kp'] = [(kp.pt, kp.size, kp.angle, kp.response, kp.octave, kp.class_id) for kp in kp1]
         to_save['des'] = des1
 
         with open(save_path, 'wb') as f:
@@ -79,7 +61,6 @@ def main():
     root_path = '../data/ddad/sift'
     rgb_path = '../data/ddad/raw_data'
     camera_names = ['CAMERA_01', 'CAMERA_05', 'CAMERA_06', 'CAMERA_07', 'CAMERA_08', 'CAMERA_09']
-    sift = cv.xfeatures2d.SIFT_create(edgeThreshold=8, contrastThreshold=0.01)
 
     with open('../datasets/ddad/info_train.pkl', 'rb') as f:
         info = pickle.load(f)
@@ -98,7 +79,8 @@ def main():
 
     # Process remaining frames
     p = multiprocessing.Pool(8)
-    for _ in tqdm(p.imap_unordered(lambda frame_id: process(sift, frame_id, info, root_path, rgb_path, camera_names, processed_frames), info_list), total=len(info_list)):
+    args = [(frame_id, info, root_path, rgb_path, camera_names, processed_frames) for frame_id in info_list]
+    for _ in tqdm(p.imap_unordered(process, args), total=len(info_list)):
         pass
     p.close()
     p.join()
@@ -108,7 +90,6 @@ def main():
     average_time = total_time / len(detect_and_compute.times)
     print(f"Total time for sift.detectAndCompute: {total_time:.4f} seconds")
     print(f"Average time per frame for sift.detectAndCompute: {average_time:.4f} seconds")
-
 
 if __name__ == "__main__":
     main()
