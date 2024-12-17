@@ -90,6 +90,8 @@ def main():
     with open(args.info_path, 'rb') as f:
         info = pickle.load(f)
 
+    os.makedirs(root_path, exist_ok=True)
+
     # Load already processed frames and measure the time
     processed_frames = load_processed_frames(root_path, camera_names)
 
@@ -109,12 +111,6 @@ def main():
         pass
     p.close()
     p.join()
-
-    # Calculate total and average time for sift.detectAndCompute
-    total_time = sum(detect_and_compute.times)
-    average_time = total_time / len(detect_and_compute.times)
-    print(f"Total time for sift.detectAndCompute: {total_time:.4f} seconds")
-    print(f"Average time per frame for sift.detectAndCompute: {average_time:.4f} seconds")
 
 if __name__ == "__main__":
     main()
