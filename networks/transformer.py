@@ -1,14 +1,13 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import pdb
 import math
-import sys
 import timm
-# from timm.models.layers.mlp import Mlp
-from timm.models.layers.helpers import to_2tuple
-from timm.models.layers import trunc_normal_
-import numpy as np
+try:
+    # 尝试从较新的路径导入
+    from timm.layers import to_2tuple
+except ImportError:
+    # 如果失败，则从旧的路径导入
+    from timm.models.layers.helpers import to_2tuple
 
 
 class CVT(nn.Module):
