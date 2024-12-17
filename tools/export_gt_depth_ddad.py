@@ -10,6 +10,7 @@ import argparse
 def get_args():
     parser = argparse.ArgumentParser(description="Export ground truth depth for DDAD dataset")
     parser.add_argument("--root_path", type=str, default='../data/ddad/raw_data', help="Root path to the raw data")
+    parser.add_argument("--save_path", type=str, help="output path for depth")
     parser.add_argument("--split", type=str, default='train', help="Dataset split to use (e.g., train, val, test)")
     parser.add_argument("--index_path", type=str, default='../datasets/ddad/index.pkl', help="Path to the index file")
 
@@ -56,7 +57,7 @@ def main():
     split = args.split
     index_path = args.index_path
     dataset = load_dataset(root_path, split)
-    root_path = os.path.join(root_path, 'depth')
+    root_path = os.path.join(args.save_path, 'depth')
     camera_names = ['CAMERA_01', 'CAMERA_05', 'CAMERA_06', 'CAMERA_07', 'CAMERA_08', 'CAMERA_09']
     index_info = load_index_info(index_path)
     save_depth_data(dataset, index_info, root_path, camera_names)
