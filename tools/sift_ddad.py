@@ -4,9 +4,8 @@ import cv2 as cv
 import pickle
 from tqdm import tqdm
 import multiprocessing
-import time
-from functools import wraps
 import copyreg
+from tools.utils import timeit
 
 TIME_LEN = 20
 
@@ -29,27 +28,11 @@ def _pickle_keypoints(point):
 copyreg.pickle(cv.KeyPoint().__class__, _pickle_keypoints)
 
 
-# Decorator function to measure the time taken by a function
-def timeit(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        wrapper.times.append(elapsed_time)
-        if len(wrapper.times) % TIME_LEN == 0:
-            average_time = sum(wrapper.times[-TIME_LEN:]) / TIME_LEN
-            print(f"Average time for last {TIME_LEN} frames in {func.__name__}: {average_time:.4f} seconds")
-        return result
-    wrapper.times = []
-    return wrapper
-
-@timeit
+@timeit(TIME_LEN)
 def detect_and_compute(img, sift):
     return sift.detectAndCompute(img, None)
 
-@timeit
+@timeit(1)
 def load_processed_frames(root_path, camera_names):
     processed_frames = set()
     for scene_name in os.listdir(root_path):
