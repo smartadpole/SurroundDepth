@@ -24,10 +24,10 @@ class DDADDataset(MonoDataset):
         super(DDADDataset, self).__init__(*args, **kwargs)
 
         self.split = 'train' if self.is_train else 'val'
-        self.rgb_path = 'data/ddad/raw_data'
-        self.depth_path = 'data/ddad/depth'
-        self.match_path = 'data/ddad/match'
-        self.mask_path = 'data/ddad/mask'
+        self.rgb_path = os.path.join(self.opt.data_path, 'raw_data')
+        self.depth_path = os.path.join(self.opt.data_path, 'depth')
+        self.match_path = os.path.join(self.opt.data_path, 'match')
+        self.mask_path = os.path.join(self.opt.data_path, 'mask')
 
         with open('datasets/ddad/{}.txt'.format(self.split), 'r') as f:
             self.filenames = f.readlines()

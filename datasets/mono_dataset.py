@@ -17,7 +17,6 @@ import cv2
 import torch
 import torch.utils.data as data
 from torchvision import transforms
-import pdb
 
 
 def pil_loader(path):
@@ -46,14 +45,19 @@ class MonoDataset(data.Dataset):
                  width,
                  frame_idxs,
                  num_scales,
-                 is_train=False):
+                 is_train=False,
+                 ):
         super(MonoDataset, self).__init__()
 
         self.opt = opt
         self.height = height
         self.width = width
         self.num_scales = num_scales
-        self.interp = Image.ANTIALIAS
+
+        try:
+            self.interp = Image.ANTIALIAS
+        except AttributeError:
+            self.interp = Image.LANCZOS
 
         self.frame_idxs = frame_idxs
 
