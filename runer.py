@@ -40,8 +40,6 @@ os.environ['WORLD_SIZE'] = '1'
 os.environ['MASTER_ADDR'] = 'localhost'
 os.environ['MASTER_PORT'] = '12355'
 
-# Initialize the process group
-dist.init_process_group(backend='nccl')
 
 # Your existing code
 
