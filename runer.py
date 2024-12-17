@@ -32,6 +32,18 @@ import cv2
 from torch.utils.data import DistributedSampler as _DistributedSampler
 import pickle
 
+import os
+
+# Set environment variables
+os.environ['RANK'] = '0'
+os.environ['WORLD_SIZE'] = '1'
+os.environ['MASTER_ADDR'] = 'localhost'
+os.environ['MASTER_PORT'] = '12355'
+
+# Initialize the process group
+dist.init_process_group(backend='nccl')
+
+# Your existing code
 
 def get_dist_info(return_gpu_per_machine=False):
     if torch.__version__ < '1.0':
