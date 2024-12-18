@@ -242,7 +242,10 @@ class Runer:
 
     def my_collate(self,batch):
         batch_new = {}
-        keys_list = list(batch[0].keys())
+        if batch[0] is not None:
+            keys_list = list(batch[0].keys())
+        else:
+            return None
         special_key_list = ['id', 'match_spatial']
 
         for key in keys_list: 
@@ -356,6 +359,8 @@ class Runer:
         with torch.no_grad():
             loader = self.val_loader
             for idx, data in enumerate(loader):
+                if data is None:
+                    continue
                 input_color = data[("color", 0, 0)].cuda()
                 gt_depths = data["depth"].cpu().numpy()
                 

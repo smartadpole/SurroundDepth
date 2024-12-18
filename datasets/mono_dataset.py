@@ -154,7 +154,8 @@ class MonoDataset(data.Dataset):
         do_flip = self.is_train and (not self.opt.use_sfm_spatial) and (not self.opt.joint_pose) and random.random() > 0.5
 
         frame_index = self.filenames[index].strip().split()[0]
-        self.get_info(inputs, frame_index, do_flip)
+        if not self.get_info(inputs, frame_index, do_flip):
+            return None
 
         
 
