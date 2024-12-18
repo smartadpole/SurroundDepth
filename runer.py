@@ -366,12 +366,17 @@ class Runer:
                 
                 camera_ids = data["id"]
                 
-                
+                start_time = time.time()
                 features = self.models["encoder"](input_color)
-                output = self.models["depth"](features)
-                
+                encoder_time = time.time() - start_time
 
+                start_time = time.time()
+                output = self.models["depth"](features)
+                depth_time = time.time() - start_time
+
+                start_time = time.time()
                 pred_disps_tensor, pred_depths = disp_to_depth(output[("disp", 0)], self.opt.min_depth, self.opt.max_depth)
+                disp_to_depth_time = time.time() - start_time
 
                 input_color_flip = torch.flip(input_color, [3])
                 features_flip = self.models["encoder"](input_color_flip)
@@ -381,6 +386,8 @@ class Runer:
                 pred_disps_flip = post_process_inv_depth(pred_disps_tensor, pred_disps_flip_tensor)
                 pred_disps = pred_disps_flip.cpu()[:, 0].numpy()
 
+                # depth metrics
+                start_time = time.time()
                 for i in range(pred_disps.shape[0]):
                     camera_id = camera_ids[i]
                     if camera_id not in list(errors['scale-aware']):
@@ -398,28 +405,30 @@ class Runer:
                         pred_depth = pred_depth * data[("K", 0, 0)][i, 0, 0].item() / self.opt.focal_scale
 
                     mask = np.logical_and(gt_depth > self.opt.min_depth, gt_depth < self.opt.max_depth)
-                    
-     
+
                     pred_depth = pred_depth[mask]
                     gt_depth = gt_depth[mask]
-                    
-                    
+
                     ratio_median = np.median(gt_depth) / np.median(pred_depth)
                     ratios_median.append(ratio_median)
                     pred_depth_median = pred_depth.copy()*ratio_median
-        
+
                     pred_depth_median[pred_depth_median < self.opt.min_depth] = self.opt.min_depth
                     pred_depth_median[pred_depth_median > self.opt.max_depth] = self.opt.max_depth
-        
+
                     errors['scale-ambiguous'][camera_id].append(compute_errors(gt_depth, pred_depth_median))
-                    
-                    
-                    
+
                     pred_depth[pred_depth < self.opt.min_depth] = self.opt.min_depth
                     pred_depth[pred_depth > self.opt.max_depth] = self.opt.max_depth
-        
+
                     errors['scale-aware'][camera_id].append(compute_errors(gt_depth, pred_depth))
-    
+                post_process_time = time.time() - start_time
+
+                print(f"Encoder time: {int(encoder_time * 1000)} ms")
+                print(f"Depth time: {int(depth_time * 1000)} ms")
+                print(f"Disparity to depth time: {int(disp_to_depth_time * 1000)} ms")
+                print(f"Post-process time: {int(post_process_time * 1000)} ms")
+
         for eval_type in eval_types:
             for camera_id in errors[eval_type].keys():
                 errors[eval_type][camera_id] = np.array(errors[eval_type][camera_id])
