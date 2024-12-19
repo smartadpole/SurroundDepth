@@ -340,8 +340,34 @@ class Runer:
                 self.log_print(camera_id)
                 self.log_print(("{:>8} | " * 7).format("abs_rel", "sq_rel", "rmse", "rmse_log", "a1", "a2", "a3"))
                 self.log_print(("&{: 8.3f}  " * 7).format(*mean_errors.tolist()) + "\\\\")
-                
 
+    def save_pred_depth(self, pred_disps, camera_id, input_colors):
+        save_dir = os.path.join(self.log_path, 'pred_depths')
+        os.makedirs(save_dir, exist_ok=True)
+        save_path = os.path.join(save_dir, f'pred_depth_{camera_id}.png')
+
+        otuput = []
+
+        for pred_depth, input_color in zip(pred_disps, input_colors):
+            # pred_depth = 1 / pred_disp
+            pred_depth = cv2.resize(pred_depth, (self.opt.width, self.opt.height))
+            pred_depth[pred_depth < self.opt.min_depth] = self.opt.min_depth
+            pred_depth[pred_depth > self.opt.max_depth] = self.opt.max_depth
+
+            print(f"Max depth: {pred_depth.max():.2f}, Min depth: {pred_depth.min():.2f}")
+            pred_depth_normalized = (pred_depth - pred_depth.min()) / (pred_depth.max() - pred_depth.min())
+            pred_depth_normalized *= 255
+            pred_depth_colormap = cv2.applyColorMap(pred_depth_normalized.astype(np.uint8), cv2.COLORMAP_JET)
+
+            input_color_np = input_color.cpu().numpy().transpose(1, 2, 0)[:, :, ::-1] * 255
+            input_color_np = input_color_np.astype(np.uint8)
+
+            combined_vertical = np.vstack((input_color_np, pred_depth_colormap))
+            otuput.append(combined_vertical)
+
+        combined_horizontal = np.hstack(otuput)
+        cv2.imwrite(save_path, combined_horizontal)
+        print(f"Saved pred depth to {save_path}")
 
     def val(self):
         """Validate the model on a single minibatch
@@ -386,6 +412,7 @@ class Runer:
                 pred_disps_flip = post_process_inv_depth(pred_disps_tensor, pred_disps_flip_tensor)
                 pred_disps = pred_disps_flip.cpu()[:, 0].numpy()
 
+                pred_depths_org = []
                 # depth metrics
                 start_time = time.time()
                 for i in range(pred_disps.shape[0]):
@@ -404,6 +431,7 @@ class Runer:
                     if self.opt.focal:
                         pred_depth = pred_depth * data[("K", 0, 0)][i, 0, 0].item() / self.opt.focal_scale
 
+                    pred_depths_org.append(pred_depth)
                     mask = np.logical_and(gt_depth > self.opt.min_depth, gt_depth < self.opt.max_depth)
 
                     pred_depth = pred_depth[mask]
@@ -423,6 +451,8 @@ class Runer:
 
                     errors['scale-aware'][camera_id].append(compute_errors(gt_depth, pred_depth))
                 post_process_time = time.time() - start_time
+
+                self.save_pred_depth(pred_depths_org, idx, input_color)
 
                 print(f"Encoder time: {int(encoder_time * 1000)} ms")
                 print(f"Depth time: {int(depth_time * 1000)} ms")
