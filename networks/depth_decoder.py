@@ -40,7 +40,7 @@ class DepthDecoder(nn.Module):
             num_ch_in = self.num_ch_enc[-1] if i == 4 else self.num_ch_dec[i + 1]
             num_ch_out = self.num_ch_dec[i]
             self.convs[f"upconv_{i}_0"] = ConvBlock(num_ch_in, num_ch_out)
-            self.upconvs0[i] = self.convs[f"upconv_{i}_0"]
+            self.upconvs0[4 - i] = self.convs[f"upconv_{i}_0"]
 
             # upconv_1
             num_ch_in = self.num_ch_dec[i]
@@ -48,7 +48,7 @@ class DepthDecoder(nn.Module):
                 num_ch_in += self.num_ch_enc[i - 1]
             num_ch_out = self.num_ch_dec[i]
             self.convs[f"upconv_{i}_1"] = ConvBlock(num_ch_in, num_ch_out)
-            self.upconvs1[i] = self.convs[f"upconv_{i}_1"]
+            self.upconvs1[4 - i] = self.convs[f"upconv_{i}_1"]
 
         for s in self.scales:
             self.convs[f"dispconv_{s}"] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
@@ -82,6 +82,7 @@ class DepthDecoder(nn.Module):
         # decoder
         x = input_features[-1]
         for i, (dispconv, upconv0, upconv1) in enumerate(zip(self.dispconvs, self.upconvs0, self.upconvs1)):
+            i = 4 - i
             x = upconv0(x)
             x = [upsample(x)]
             if self.use_skips and i > 0:
