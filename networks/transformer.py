@@ -15,7 +15,7 @@ class CVT(nn.Module):
         super().__init__()
         self.embed_dim = input_channel
         self.iter_num = iter_num
-        self.self_block = []
+        self.self_block = nn.ModuleList()
         for i in range(iter_num):
             self.self_block.append(Self_Block(dim=self.embed_dim, num_heads=8))
         self.decoder = nn.ModuleList(list(self.self_block))
@@ -52,14 +52,14 @@ class CVT(nn.Module):
         B, N, C, H, W = x.shape
         x = self.sep_conv(x.view(-1,C,H,W)).view(B,N,C,H//self.downsample_ratio,W//self.downsample_ratio)
 
-        for i in range(self.iter_num):
-            self.pos_embed = self.postional_embed(x[:,0,:,:,:]).unsqueeze(1).repeat(1,N,1,1,1) # B, N, C, H, W
+        for i, block in enumerate(self.self_block):
+            pos_embed = self.postional_embed(x[:,0,:,:,:]).unsqueeze(1).repeat(1,N,1,1,1) # B, N, C, H, W
                 
-            # reshape #
+            # reshape for self-attention
             x = x.permute(0,1,3,4,2).reshape(B,-1,C)
-            x_pos = self.pos_embed.permute(0,1,3,4,2).reshape(B,-1,C)
-    
-            x = self.self_block[i](x,x_pos).reshape(B,N,C,H//self.downsample_ratio, W//self.downsample_ratio)
+            x_pos = pos_embed.permute(0,1,3,4,2).reshape(B,-1,C)
+
+            x = block(x,x_pos).reshape(B,N,C,H//self.downsample_ratio, W//self.downsample_ratio)
     
         x = self.sep_deconv(x.view(-1, C, H//self.downsample_ratio, W//self.downsample_ratio))
         x = x.view(B,N,C,H,W)
@@ -169,7 +169,7 @@ class PositionEmbeddingSine(nn.Module):
     def forward(self, x):
         # pdb.set_trace()
         # x = x.permute(0,2,3,1)
-        mask = torch.zeros_like(x[:,0,:,:]).bool()
+        mask = torch.zeros_like(x[:,0,:,:]).to(torch.bool)
         assert mask is not None
         not_mask = ~mask
         y_embed = not_mask.cumsum(1, dtype=torch.float32)

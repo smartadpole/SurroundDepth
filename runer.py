@@ -119,7 +119,7 @@ class Runer:
         self.parameters_to_train += list(self.models["encoder"].parameters())
 
         self.models["depth"] = networks.DepthDecoder(
-            self.opt, self.models["encoder"].num_ch_enc, self.opt.scales)
+            self.opt.skip, self.models["encoder"].num_ch_enc, self.opt.scales)
         self.models["depth"] = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.models["depth"])
         self.models["depth"] = (self.models["depth"]).to(self.device)
         self.parameters_to_train += list(self.models["depth"].parameters())
@@ -264,7 +264,7 @@ class Runer:
         """Convert all models to training mode
         """
         for m in self.models.values():
-            m.train()
+            m.is_train()
 
     def set_eval(self):
         """Convert all models to testing/evaluation mode

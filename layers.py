@@ -219,7 +219,7 @@ class Project3D(nn.Module):
 def upsample(x):
     """Upsample input tensor by a factor of 2
     """
-    return F.interpolate(x, scale_factor=2, mode="nearest")
+    return F.interpolate(x, scale_factor=2.0, mode="nearest")
 
 
 def get_smooth_loss(disp, img):
