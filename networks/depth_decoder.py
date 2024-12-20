@@ -52,7 +52,7 @@ class DepthDecoder(nn.Module):
 
         for s in self.scales:
             self.convs[f"dispconv_{s}"] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
-            self.dispconvs[s] = self.convs[f"dispconv_{s}"]
+            self.dispconvs[4 - s] = self.convs[f"dispconv_{s}"]
 
         self.decoder = nn.ModuleList(list(self.convs.values()))
         self.sigmoid = nn.Sigmoid()
@@ -95,6 +95,7 @@ class DepthDecoder(nn.Module):
                 #     self.outputs[("disp", i)] = self.sigmoid(dispconv(x))
                 pass
             else:
-                self.outputs = self.sigmoid(dispconv(x))
+                if i == 0:
+                    self.outputs = self.sigmoid(dispconv(x))
         return self.outputs
 
