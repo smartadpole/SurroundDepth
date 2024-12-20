@@ -23,7 +23,7 @@ def load_model(model_path, device):
     encoder.load_state_dict(encoder_state_dict, strict=False)
 
 
-    depth_decoder = DepthDecoder(skip=True, num_ch_enc=[int(ch) for ch in encoder.num_ch_enc], is_train=False)  # Pass the required argument
+    depth_decoder = DepthDecoder(skip=True, num_ch_enc=[int(ch) for ch in encoder.num_ch_enc])  # Pass the required argument
 
     # Load depth decoder state dict
     depth_decoder_state_dict = torch.load(depth_decoder_path, map_location=device)
@@ -43,12 +43,12 @@ class CombinedModel(torch.nn.Module):
     def __init__(self):
         super(CombinedModel, self).__init__()
         self.encoder = ResnetEncoder(num_layers=34, pretrained=False)
-        self.decoder = DepthDecoder(skip=True, num_ch_enc=[int(ch) for ch in self.encoder.num_ch_enc], is_train=False)
+        self.decoder = DepthDecoder(skip=True, num_ch_enc=[int(ch) for ch in self.encoder.num_ch_enc])
 
     def forward(self, x):
         features = self.encoder(x)
         output = self.decoder(features)
-        return output
+        return output[("disp", 0)]
 
     def load(self, model_path, device):
         self.encoder, self.decoder = load_model(model_path, device)

@@ -16,10 +16,10 @@ from .transformer import *
 
 
 class DepthDecoder(nn.Module):
-    def __init__(self, opt, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True):
+    def __init__(self, skip, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True):
         super(DepthDecoder, self).__init__()
 
-        self.opt = opt
+        self.skip = skip
         self.num_output_channels = num_output_channels
         self.upsample_mode = 'nearest'
         self.scales = scales
@@ -64,7 +64,7 @@ class DepthDecoder(nn.Module):
         self.outputs = {}
         for i in range(len(input_features)):
             B, C, H, W = input_features[i].shape
-            if self.opt.skip:
+            if self.skip:
                 input_features[i] = input_features[i] + self.cross[i](input_features[i].reshape(-1, 6, C, H, W)).reshape(B, C, H, W)
             else:
                 input_features[i] = self.cross[i](input_features[i].reshape(-1, 6, C, H, W)).reshape(B, C, H, W)
