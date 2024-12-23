@@ -86,6 +86,8 @@ class ResnetEncoder(nn.Module):
             self.num_ch_enc[1:] *= 4
 
     def forward(self, input_image):
+
+        input_image = torch.cat([input_image] * 6, dim=0)
         self.features = []
         x = (input_image - 0.45) / 0.225
         x = self.encoder.conv1(x)
