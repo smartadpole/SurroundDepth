@@ -3,6 +3,7 @@ import os
 from networks import ResnetEncoder, DepthDecoder  # 假设这些模型定义在 models 模块中
 import argparse
 from tools.file import MkdirSimple
+from tools.utils import print_onnx
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Export model to ONNX format")
@@ -23,7 +24,7 @@ def load_model(model_path, device):
     encoder.load_state_dict(encoder_state_dict, strict=False)
 
 
-    depth_decoder = DepthDecoder(skip=True, num_ch_enc=[int(ch) for ch in encoder.num_ch_enc])  # Pass the required argument
+    depth_decoder = DepthDecoder(skip=True, num_ch_enc=[int(ch) for ch in encoder.num_ch_enc], is_train=False)  # Pass the required argument
 
     # Load depth decoder state dict
     depth_decoder_state_dict = torch.load(depth_decoder_path, map_location=device)
@@ -47,8 +48,10 @@ class CombinedModel(torch.nn.Module):
 
     def forward(self, x):
         features = self.encoder(x)
+        return features[0:1, 0:1, ::]
         output = self.decoder(features)
-        return output[("disp", 0)][0, :, :, :]
+        output = output[0:1, ::]
+        return output
 
     def load(self, model_path, device):
         self.encoder, self.decoder = load_model(model_path, device)
@@ -60,7 +63,7 @@ def export_to_onnx(model_path, onnx_path, device):
     model.load(model_path, device)
 
     # Create dummy input for the model
-    dummy_input = torch.randn(1, 3, 384, 640).to(device)  # Adjust the size as needed
+    dummy_input = torch.randn(1, 1, 384, 640).to(device)  # Adjust the size as needed
 
     # Export the depth decoder
     with torch.no_grad():
@@ -72,6 +75,7 @@ def export_to_onnx(model_path, onnx_path, device):
                           do_constant_folding=True)
 
     print(f"Models exported to {onnx_path}")
+    print_onnx(onnx_file)
 
 
 if __name__ == "__main__":
