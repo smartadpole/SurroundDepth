@@ -24,7 +24,7 @@ def load_model(model_path, device):
     encoder.load_state_dict(encoder_state_dict, strict=False)
 
 
-    depth_decoder = DepthDecoder(skip=True, num_ch_enc=[int(ch) for ch in encoder.num_ch_enc], is_train=False)  # Pass the required argument
+    depth_decoder = DepthDecoder(skip=True, num_ch_enc=[int(ch) for ch in encoder.num_ch_enc])  # Pass the required argument
 
     # Load depth decoder state dict
     depth_decoder_state_dict = torch.load(depth_decoder_path, map_location=device)
@@ -48,8 +48,8 @@ class CombinedModel(torch.nn.Module):
 
     def forward(self, x):
         features = self.encoder(x)
-        return features[0:1, 0:1, ::]
         output = self.decoder(features)
+        output = output[("disp", 0)]
         output = output[0:1, ::]
         return output
 
@@ -63,14 +63,14 @@ def export_to_onnx(model_path, onnx_path, device):
     model.load(model_path, device)
 
     # Create dummy input for the model
-    dummy_input = torch.randn(1, 1, 384, 640).to(device)  # Adjust the size as needed
+    dummy_input = torch.randn(1, 3, 384, 640).to(device)  # Adjust the size as needed
 
     # Export the depth decoder
     with torch.no_grad():
         onnx_file = os.path.join(onnx_path, "depth_decoder.onnx")
         # depth_decoder = torch.jit.script(depth_decoder)
         torch.onnx.export(model, dummy_input, onnx_file,
-                          export_params=False,  # store the trained parameter weights inside the model file
+                          export_params=True,  # store the trained parameter weights inside the model file
                           opset_version=11,  # the ONNX version to export the model to
                           do_constant_folding=True)
 
