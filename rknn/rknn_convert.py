@@ -120,8 +120,10 @@ if __name__ == '__main__':
     print('--> Running model')
     start_time = time.time()
     outputs = rknn.inference(inputs=[img], data_format=['nhwc'])
-    x = outputs[0]
+    print('len of output {}'.format(len(outputs)))
+    [print('output shape is {}'.format(output.shape)) for output in outputs]
     print('done')
     print("Inference time: {:.2f} seconds".format(time.time() - start_time))
+    x = outputs[0]
 
     rknn.release()
