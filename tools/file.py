@@ -10,7 +10,7 @@
 import os
 import re
 
-__all__ = ["FILE_SUFFIX", "Walk", "MkdirSimple", "WriteTxt", "WalkImage"]
+__all__ = ["FILE_SUFFIX", "Walk", "MkdirSimple", "WriteTxt", "WalkImage", "GetImages", 'ReadImageList', 'match_stereo_file']
 
 FILE_SUFFIX = ['jpg', 'png', 'jpeg', 'bmp', 'tiff']
 
@@ -28,6 +28,22 @@ def Walk(path, suffix:tuple):
 def WalkImage(path):
     return Walk(path, tuple(FILE_SUFFIX))
 
+def ReadImageList(image_path):
+    """Get a list of image paths from a directory or a single image path."""
+    if os.path.isfile(image_path):
+        if image_path.endswith(tuple(FILE_SUFFIX)):
+            return [image_path]
+        else:
+            image_list = []
+            with open(image_path, "r") as file:
+                image_list = file.readlines()
+                image_list = [f.strip() for f in image_list]
+            return image_list
+    elif os.path.isdir(image_path):
+        return WalkImage(image_path)
+    else:
+        raise Exception("Cannot find image_path: {}".format(image_path))
+
 def MkdirSimple(path):
     path_current = os.path.dirname(path) if os.path.splitext(path)[1] else path
     if path_current not in ["", "./", ".\\"]:
@@ -37,3 +53,30 @@ def WriteTxt(txt, path, encoding):
     MkdirSimple(path)
     with open(path, encoding) as out:
         out.write(txt)
+
+
+def GetImages(path):
+    if os.path.isfile(path):
+        # Only testing on a single image
+        paths = [path]
+        root_len = len(os.path.dirname(paths).rstrip('/'))
+    elif os.path.isdir(path):
+        # Searching folder for images
+        paths = WalkImage(path)
+        root_len = len(path.rstrip('/'))
+    else:
+        raise Exception("Can not find path: {}".format(path))
+
+    return paths, root_len
+
+def match_stereo_file(left_path, right_path):
+    left_list = ReadImageList(left_path)
+    right_list = ReadImageList(right_path)
+
+    common_files = set(os.path.relpath(file, start=os.path.commonpath(left_list)) for file in left_list).intersection(
+        os.path.relpath(file, start=os.path.commonpath(right_list)) for file in right_list)
+    left_list[:] = [file for file in left_list if
+                    os.path.relpath(file, start=os.path.commonpath(left_list)) in common_files]
+    right_list[:] = [file for file in right_list if
+                     os.path.relpath(file, start=os.path.commonpath(right_list)) in common_files]
+    return left_list, right_list

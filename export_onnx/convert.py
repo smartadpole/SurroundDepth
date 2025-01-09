@@ -3,12 +3,15 @@ import os
 from networks import ResnetEncoder, DepthDecoder  # 假设这些模型定义在 models 模块中
 import argparse
 from tools.file import MkdirSimple
-from tools.utils import print_onnx
+from export_onnx.onnx_test import test_dir
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Export model to ONNX format")
     parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model.")
-    parser.add_argument("--onnx_path", type=str, required=True, help="Path to save the ONNX model.")
+    parser.add_argument("--output", type=str, required=True, help="Path to save the ONNX model.")
+    parser.add_argument("--height", help='Model image input height resolution', type=int, default=384)
+    parser.add_argument("--width", help='Model image input height resolution', type=int, default=640)
+    parser.add_argument("--test", action="store_true", help="test model")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to run the model on.")
     return parser.parse_args()
 
@@ -57,29 +60,33 @@ class CombinedModel(torch.nn.Module):
         self.encoder, self.decoder = load_model(model_path, device)
 
 
-def export_to_onnx(model_path, onnx_path, device):
-    """Export the model to ONNX format."""
-    model = CombinedModel()
-    model.load(model_path, device)
-
-    # Create dummy input for the model
-    dummy_input = torch.randn(1, 3, 384, 640).to(device)  # Adjust the size as needed
-
-    # Export the depth decoder
-    with torch.no_grad():
-        onnx_file = os.path.join(onnx_path, "depth_decoder.onnx")
-        # depth_decoder = torch.jit.script(depth_decoder)
-        torch.onnx.export(model, dummy_input, onnx_file,
-                          export_params=True,  # store the trained parameter weights inside the model file
-                          opset_version=11,  # the ONNX version to export the model to
-                          do_constant_folding=True)
-
-    print(f"Models exported to {onnx_path}")
-    print_onnx(onnx_file)
-
-
 if __name__ == "__main__":
     args = parse_args()
     device = torch.device(args.device)
-    MkdirSimple(args.onnx_path)
-    export_to_onnx(args.model_path, args.onnx_path, device)
+
+    args = parse_args()
+    model_name = os.path.splitext(os.path.basename(args.model_path))[0].replace(" ", "_")
+    output = os.path.join(args.output, model_name,  f'{args.width}_{args.height}')
+    onnx_file = os.path.join(output,  f'SurroudnDepth_{args.width}_{args.height}_{model_name}_12.onnx')
+    MkdirSimple(output)
+    output_names = 'output'
+
+    model = CombinedModel()
+    model.load(args.model_path, device)
+
+    # Create dummy input for the model
+    dummy_input = torch.randn(1, 3, args.height, args.width).to(device)  # Adjust the size as needed
+
+    # Export the depth decoder
+    with torch.no_grad():
+        # depth_decoder = torch.jit.script(depth_decoder)
+        torch.onnx.export(model, dummy_input, onnx_file,
+                          export_params=True,  # store the trained parameter weights inside the model file
+                          opset_version=12,  # the ONNX version to export the model to
+                          do_constant_folding=True)
+
+    if args.test:
+        test_dir(onnx_file, [], output)
+
+    print("export onnx to {}".format(onnx_file))
+
